@@ -1,25 +1,25 @@
-# esp-idf-vscode-boilerplate
-Boilerplate for developing ESP32 projects using ESP-IDF and VS Code
+# esp-idf-vscode-WIFI_Library
+In this repository, I have written a Wifi Library in ESP-IDF and in this library i have implemented various functions.
 
-  > Note 1: You need to have installed [C/C++](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) extension in your VS Code.
+## Functions
 
-  > Note 2: Make sure that you have `ESP_IDF` environment variable (which leads to esp-idf folder) and path to XTENSA compiler _bin_ folder needs to be present on the `PATH`.
-
-## How to use
-
-1. Clone repository
+1. WIFI_STA_CONNECTION()
 ```
-git clone https://github.com/abobija/esp-idf-vscode-boilerplate.git my-project
+Connect ESP32 in STA Mode Wifi
 ```
 
-2. Go inside of project folder
+2. WIFI_AP_CONNECTION()
 ```
-cd my-project
+Connect ESP32 in AP Mode Wifi
 ```
 
-3. Start VSC
+3. WIFI_SCAN()
 ```
-code .
+Scan Wifi Networks for ESP32
+```
+4. WIFI_Reconnect()
+```
+Reconnect ESP32 to Wifi
 ```
 
 ## Config, Build and Flash
@@ -30,16 +30,3 @@ idf.py menuconfig
 idf.py build
 idf.py -p (PORT) flash
 ```
-
-## Demo
-
-[![Get started with ESP32 in VS CODE ... ESP-IDF](https://img.youtube.com/vi/aQi8qiW9fmg/mqdefault.jpg)](https://www.youtube.com/watch?v=aQi8qiW9fmg)
-
-## Author
-
-GitHub: [abobija](https://github.com/abobija)<br>
-Homepage: [abobija.com](https://abobija.com)
-
-## License
-
-[MIT](LICENSE)
