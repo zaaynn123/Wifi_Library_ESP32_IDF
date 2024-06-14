@@ -1,16 +1,11 @@
 #include <stdio.h>
 #include "Wifi.h"
-#define STA_MODE
 
 void app_main(void) {
-#ifdef AP_MODE
-WIFI_AP_CONNECTION();
-#endif
 
-#ifdef STA_MODE
-WIFI_STA_CONNECTION();
-WIFI_SCAN();
-WIFI_Reconnect();
-#endif
+WIFI_AP_CONNECTION(); // This functions help to Connect ESP32 Wifi in Station Mode.
+WIFI_STA_CONNECTION(); // This functions help to Connect ESP32 Wifi in AP Mode.
+WIFI_SCAN(); // This function helps to Scan the nearby Networks for the ESP32 to Connect to.
+WIFI_Reconnect(); // This function helps to Reconnect ESP32 to Wifi.
 
 }

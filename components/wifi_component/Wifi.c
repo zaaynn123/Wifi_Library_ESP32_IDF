@@ -13,11 +13,31 @@
 #include "lwip/sys.h"
 
 static const char *TAG = "wifi";
-static EventGroupHandle_t s_wifi_event_group;
-static int s_retry_num = 0;
+static EventGroupHandle_t s_wifi_event_group; // Signals that we have connected to Wifi.
+static int s_retry_num = 0; // used to count upto the maximum number of reconnection tries after disconnecting.
+bool wifi_init_en = false; // check if the initilization of wifi has occured if it has occured, it sets it to true to skip initilization again.
 
+// Function for Wifi initilization 
+void wifi_init()
+{
+    /* Clearing the NVS initially so that Credientials can be saved.*/
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+    ESP_LOGI(TAG, "ESP_WIFI_ENABLING");
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default()); // creating event loop for wifi event handlers to be registered at it
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg)); // initilaizing wifi default configuration.
+    wifi_init_en = true; // set to true to disable calling the wifi_init() function again.
+
+}
+// event handler for AP mode
+static void wifi_event_handler_ap(void* arg, esp_event_base_t event_base,
                                     int32_t event_id, void* event_data)
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED) {
@@ -31,8 +51,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-
-static void event_handler(void* arg, esp_event_base_t event_base,
+// event handler for STA mode
+static void wifi_event_handler_sta(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -53,43 +73,33 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
-
+// Function to connect the ESP32 to AP mode.
 void WIFI_AP_CONNECTION()
 {
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+    //checks the initilizations
+    if(wifi_init_en == false){
+    wifi_init();
     }
-    ESP_ERROR_CHECK(ret);
-
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
+                                                        &wifi_event_handler_ap,
                                                         NULL,
                                                         NULL));
 
     wifi_config_t wifi_config = {
         .ap = {
-            .ssid = ESP_WIFI_SSID,
-            .ssid_len = strlen(ESP_WIFI_SSID),
-            .channel = ESP_WIFI_CHANNEL,
-            .password = ESP_WIFI_PASS,
+            .ssid = ESP_WIFI_SSID_AP,
+            .ssid_len = strlen(ESP_WIFI_SSID_AP),
+            .channel = ESP_WIFI_CHANNEL_AP,
+            .password = ESP_WIFI_PASS_AP,
             .max_connection = MAX_STA_CONN,
             .pmf_cfg = {
                     .required = true,
             },
         },
     };
-    if (strlen(ESP_WIFI_PASS) == 0) {
+    if (strlen(ESP_WIFI_PASS_AP) == 0) {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
     }
 
@@ -98,47 +108,35 @@ void WIFI_AP_CONNECTION()
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
-             ESP_WIFI_SSID, ESP_WIFI_PASS, ESP_WIFI_CHANNEL);
+             ESP_WIFI_SSID_AP, ESP_WIFI_PASS_AP, ESP_WIFI_CHANNEL_AP);
 }
 
-
+// Function to connect the ESP32 to STA mode.
 void WIFI_STA_CONNECTION()
 {
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+    // check the initilizations
+    if(wifi_init_en == false){
+    wifi_init();
     }
-    ESP_ERROR_CHECK(ret);
-
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     s_wifi_event_group = xEventGroupCreate();
-
-    ESP_ERROR_CHECK(esp_netif_init());
-
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         ESP_EVENT_ANY_ID,
-                                                        &event_handler,
+                                                        &wifi_event_handler_sta,
                                                         NULL,
                                                         &instance_any_id));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
                                                         IP_EVENT_STA_GOT_IP,
-                                                        &event_handler,
+                                                        &wifi_event_handler_sta,
                                                         NULL,
                                                         &instance_got_ip));
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = ESP_WIFI_SSID,
-            .password = ESP_WIFI_PASS,
+            .ssid = ESP_WIFI_SSID_STA,
+            .password = ESP_WIFI_PASS_STA,
         },
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
@@ -146,28 +144,30 @@ void WIFI_STA_CONNECTION()
     ESP_ERROR_CHECK(esp_wifi_start() );
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
-
+    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+     * number of re-tries (WIFI_FAIL_BIT). The bits are set by handler function (see above) */
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
             pdFALSE,
             pdFALSE,
             portMAX_DELAY);
 
-
+    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
+    * happened. */
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 ESP_WIFI_SSID, ESP_WIFI_PASS);
+                 ESP_WIFI_SSID_STA, ESP_WIFI_PASS_STA);
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-                 ESP_WIFI_SSID, ESP_WIFI_PASS);
+                 ESP_WIFI_SSID_STA, ESP_WIFI_PASS_STA);
     } else {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
 }
-
+// Function to Scan the nearby Networks for ESP32.
 void WIFI_SCAN()
 {
-    uint16_t number = DEFAULT_SCAN_LIST_SIZE;
+    uint16_t number = DEFAULT_SCAN_LIST_SIZE; 
     wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
     uint16_t ap_count = 0;
     memset(ap_info, 0, sizeof(ap_info));
@@ -183,6 +183,7 @@ void WIFI_SCAN()
     }
 }
 
+// Function to Reconnect to WiFi.
 void WIFI_Reconnect()
 {
     ESP_LOGI(TAG, "Trying to Reconnect");

@@ -1,19 +1,31 @@
 menu "Example Configuration"
 
-    config ESP_WIFI_SSID
-        string "WiFi SSID"
+    config ESP_WIFI_SSID_STA
+        string "WiFi SSID STA"
         default "myssid"
         help
-            SSID (network name) for the example to connect to.
+            SSID (network name) for the example STA to connect to.
 
-    config ESP_WIFI_PASSWORD
-        string "WiFi Password"
+    config ESP_WIFI_PASSWORD_STA
+        string "WiFi Password STA"
         default "mypassword"
         help
-            WiFi password (WPA or WPA2) for the example to use.
+            WiFi password (WPA or WPA2) for the example STA to use.
+
+    config ESP_WIFI_SSID_AP
+        string "WiFi SSID AP"
+        default "myssid"
+        help
+            SSID (network name) for the example AP to connect to.
+
+    config ESP_WIFI_PASSWORD_AP
+        string "WiFi Password AP"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example AP to use.
             
-    config ESP_WIFI_CHANNEL
-        int "WiFi Channel"
+    config ESP_WIFI_CHANNEL_AP
+        int "WiFi Channel AP"
         range 1 13
         default 1
         help
@@ -30,7 +42,6 @@ menu "Example Configuration"
         default 4
         help
             Max number of the STA connects to AP.
-
     
     config EXAMPLE_SCAN_LIST_SIZE
         int "Max size of scan list"
